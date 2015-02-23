@@ -6,6 +6,11 @@
 #include <string.h>
 #include <pthread.h>
 
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <fcntl.h>
+
+
 #define MB 1024*1024
 #define BUF_64MB 64*MB
 
@@ -17,17 +22,32 @@ typedef struct {
 } thread_data;
 
 int main(int argc, char* argv[]) {
-	size_t bufsize = BUF_64MB; 
-	if (argc == 2) {
-		bufsize = strtol(argv[1], NULL, 10) * MB;
+	size_t bufsize = BUF_64MB;
+	size_t cpu_count = sysconf(_SC_NPROCESSORS_ONLN);
+	int out_fd = STDOUT_FILENO;
+	
+	char c;
+	while ((c = getopt(argc, argv, "n:b:d:")) != -1 ) {
+		switch (c) {
+			case 'n':
+				//Thread count
+				cpu_count = (int)strtol(optarg, NULL, 10);
+				break;
+			case 'b':
+				//Buffer size
+				bufsize = (int)strtol(optarg, NULL, 10)*MB;
+				break;
+			case 'd':				
+				//Device
+				if (optarg[0] != '-') { 
+					out_fd = open(optarg, O_WRONLY);
+				}
+				break;
+		}
 	}
-
 	//TODO: arguments!
-	// - thread count (default CPU count)
-	// - buffer size (default 64MB)
 	// - device (default stdout)
 
-	size_t cpu_count = 8;
 	pthread_t threads[cpu_count];
 
 	int problem = 0;
@@ -47,7 +67,7 @@ int main(int argc, char* argv[]) {
 			pthread_join(threads[i], NULL);	
 		}
 
-		if (write(STDOUT_FILENO, (char*)buffer, bufsize) != 0) {
+		if (write(out_fd, (char*)buffer, bufsize) != 0) {
 			int err = errno;
 			if (err == EPIPE || err == ENOSPC) {
 				//EPIPE: no problem, reading piped process ended...
@@ -72,7 +92,7 @@ void* rdrand_thread(void* data) {
 
 	for (size_t i = args.start; i < args.end; i++) {
 		int64_t random;
-		asm (
+		__asm__ (
 			"rdrand %0;"
 			: "=r" (random)
 		);
