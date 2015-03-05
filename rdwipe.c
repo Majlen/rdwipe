@@ -1,3 +1,5 @@
+#define _POSIX_C_SOURCE 2
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdint.h>
@@ -9,7 +11,6 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <fcntl.h>
-
 
 #define MB 1024*1024
 #define BUF_64MB 64*MB
@@ -45,8 +46,6 @@ int main(int argc, char* argv[]) {
 				break;
 		}
 	}
-	//TODO: arguments!
-	// - device (default stdout)
 
 	pthread_t threads[cpu_count];
 
